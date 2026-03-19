@@ -1,0 +1,36 @@
+# Minimal stack for CI / integration tests: MockPhysicsWorld, no PyBullet sensor plugins.
+
+world:
+  backend: mock
+  gui: false
+  robots:
+    - {id: scout, x: 3, y: 0}
+    - {id: worker, x: -2, y: 3}
+
+goal:
+  x: 8.0
+  y: 5.0
+  z: 0.31
+
+engine:
+  config:
+    engine:
+      enable_metrics: true
+
+plugins:
+  - type: goal_publisher
+    kwargs: {}
+  - type: occupancy_map
+    kwargs:
+      resolution: 1.0
+
+agents:
+  - type: physics_agent
+    kwargs:
+      robot_id: default
+  - type: goal_agent
+    kwargs:
+      robot_id: scout
+  - type: astar_agent
+    kwargs:
+      robot_id: worker

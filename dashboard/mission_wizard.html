@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IR-AAP 任務 YAML 精靈 | Mission wizard</title>
+<style>
+:root{--bg:#0a0e17;--panel:#111827;--bd:#1e2d4a;--tx:#c8d6e5;--acc:#00d2ff;--muted:#7a8ba8}
+*{box-sizing:border-box}body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:16px;max-width:920px;margin:0 auto;line-height:1.45}
+h1{font-size:1.15rem;font-weight:600;color:var(--acc)}h2{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 8px}
+.card{background:var(--panel);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0}
+.row label{min-width:140px;font-size:.82rem;color:var(--muted)}
+.row input,.row select{flex:1;min-width:120px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;background:#0f1923;color:var(--tx)}
+textarea{width:100%;min-height:72px;padding:8px;border:1px solid var(--bd);border-radius:6px;background:#0f1923;color:var(--tx);font-family:ui-monospace,monospace;font-size:.78rem}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button{padding:8px 14px;border:1px solid var(--bd);border-radius:6px;background:#1a2744;color:var(--tx);cursor:pointer;font-size:.85rem}
+button.primary{background:linear-gradient(135deg,#0055ff,#7a5cff);border-color:#7a5cff;color:#fff;font-weight:600}
+a{color:var(--acc)}.hint{font-size:.75rem;color:var(--muted);margin-top:4px}
+#out{min-height:220px}
+.chk{display:flex;align-items:center;gap:6px;font-size:.82rem}
+</style>
+</head>
+<body>
+<h1>IR-AAP 任務 YAML 精靈 <span style="font-weight:400;color:var(--muted);font-size:.85rem">（表單 → 下載設定檔）</span></h1>
+<p style="font-size:.88rem;color:var(--muted)">填完按「產生 YAML」，存成 <code>.yaml</code> 後執行：<code>iraap serve --profile ./你的檔案.yaml</code>。無需寫程式即可改機器人、障礙與目標。</p>
+<p><a href="/dashboard">← 回儀表板</a> · <a href="/docs">API 文件</a></p>
+
+<div class="card">
+<h2>世界 World</h2>
+<div class="row"><label>模擬後端</label>
+  <select id="backend"><option value="pybullet">pybullet（3D 物理）</option><option value="mock">mock（測流程，需改用 mock 專用外掛組）</option></select></div>
+<p class="hint">若選 mock，請改用 <code>iraap serve --mock-world</code> 或 <code>config/mock_api_iraap.yaml</code>；此精靈預設產生 pybullet 用插件。</p>
+<div class="row chk"><input type="checkbox" id="gui"/><label for="gui" style="min-width:auto">顯示 PyBullet 視窗（gui）</label></div>
+</div>
+
+<div class="card">
+<h2>機器人 Robots（勿使用 id=<code>default</code>，系統已保留）</h2>
+<div class="row"><label>車輛 1 — ID</label><input id="r1id" value="my_agv"/></div>
+<div class="row"><label>車輛 1 — X / Y</label><input id="r1x" type="number" step="0.5" value="0"/><input id="r1y" type="number" step="0.5" value="0"/></div>
+<div class="row chk"><input type="checkbox" id="r2on"/><label for="r2on" style="min-width:auto">第二台車</label></div>
+<div id="r2block" style="display:none;margin-top:8px">
+<div class="row"><label>車輛 2 — ID</label><input id="r2id" value="agv_b"/></div>
+<div class="row"><label>車輛 2 — X / Y</label><input id="r2x" type="number" step="0.5" value="3"/><input id="r2y" type="number" step="0.5" value="-2"/></div>
+</div>
+</div>
+
+<div class="card">
+<h2>目標 Goal</h2>
+<div class="row"><label>X / Y / Z</label>
+<input id="gx" type="number" step="0.5" value="6"/><input id="gy" type="number" step="0.5" value="4"/><input id="gz" type="number" step="0.1" value="0.31"/></div>
+</div>
+
+<div class="card">
+<h2>障礙物 Obstacles</h2>
+<p class="hint">每行一個：<code>x y z</code>（方塊中心）。留空則不放障礙。</p>
+<textarea id="obs" placeholder="4 0 0.5&#10;2 3 0.5"></textarea>
+</div>
+
+<div class="card">
+<h2>感測模組 Plugins</h2>
+<div class="row chk"><input type="checkbox" id="pl_dist" checked/><label for="pl_dist" style="min-width:auto">physics_distance</label></div>
+<div class="row chk"><input type="checkbox" id="pl_lidar" checked/><label for="pl_lidar" style="min-width:auto">physics_lidar</label></div>
+<div class="row chk"><input type="checkbox" id="pl_goal" checked disabled/><label for="pl_goal" style="min-width:auto">goal_publisher（必選）</label></div>
+<div class="row chk"><input type="checkbox" id="pl_col" checked/><label for="pl_col" style="min-width:auto">collision_detector</label></div>
+<div class="row chk"><input type="checkbox" id="pl_map" checked/><label for="pl_map" style="min-width:auto">occupancy_map</label></div>
+<div class="row"><label>地圖解析度</label><input id="mapres" type="number" step="0.1" value="1"/></div>
+</div>
+
+<div class="card">
+<h2>行為 Agents</h2>
+<div class="row chk"><input type="checkbox" id="ag_def" checked/><label for="ag_def" style="min-width:auto">為內建 default 機器人啟用 physics_agent（建議開）</label></div>
+<div class="row"><label>車輛 1 行為</label>
+  <select id="a1t"><option value="goal_agent">goal_agent（朝目標）</option><option value="astar_agent">astar_agent（地圖路徑）</option><option value="physics_agent">physics_agent（反應避障）</option></select></div>
+<div id="a2row" class="row" style="display:none"><label>車輛 2 行為</label>
+  <select id="a2t"><option value="goal_agent">goal_agent</option><option value="astar_agent" selected>astar_agent</option><option value="physics_agent">physics_agent</option></select></div>
+</div>
+
+<div class="btns">
+<button type="button" class="primary" onclick="gen()">產生 YAML</button>
+<button type="button" onclick="download()">下載 mission.yaml</button>
+</div>
+
+<div class="card" style="margin-top:16px">
+<h2>輸出 Output</h2>
+<textarea id="out" readonly placeholder="按「產生 YAML」…"></textarea>
+</div>
+
+<script>
+document.getElementById('r2on').onchange=function(){
+  document.getElementById('r2block').style.display=this.checked?'block':'none';
+  document.getElementById('a2row').style.display=this.checked?'flex':'none';
+};
+
+function num(v,d){const x=parseFloat(v);return Number.isFinite(x)?x:d}
+
+function pluginBlock(name, mapRes){
+  if(name==='physics_distance')return `  - type: physics_distance
+    kwargs:
+      noise_level: 0.1
+      seed: 42
+`;
+  if(name==='physics_lidar')return `  - type: physics_lidar
+    kwargs:
+      num_rays: 36
+      noise_level: 0.05
+`;
+  if(name==='goal_publisher')return `  - type: goal_publisher
+    kwargs: {}
+`;
+  if(name==='collision_detector')return `  - type: collision_detector
+    kwargs: {}
+`;
+  if(name==='occupancy_map')return `  - type: occupancy_map
+    kwargs:
+      resolution: ${mapRes}
+`;
+  return '';
+}
+
+function gen(){
+  const backend=document.getElementById('backend').value;
+  const gui=document.getElementById('gui').checked;
+  const r1id=(document.getElementById('r1id').value||'my_agv').trim().replace(/\s+/g,'_');
+  const r2on=document.getElementById('r2on').checked;
+  if(r1id==='default'){alert('請勿使用 robot id「default」');return;}
+  const r1x=num(document.getElementById('r1x').value,0), r1y=num(document.getElementById('r1y').value,0);
+  let robots=`    - {id: ${r1id}, x: ${r1x}, y: ${r1y}}\n`;
+  let agents='';
+  if(document.getElementById('ag_def').checked){
+    agents+=`  - type: physics_agent
+    kwargs:
+      robot_id: default
+`;
+  }
+  agents+=`  - type: ${document.getElementById('a1t').value}
+    kwargs:
+      robot_id: ${r1id}
+`;
+  if(r2on){
+    let r2id=(document.getElementById('r2id').value||'agv_b').trim().replace(/\s+/g,'_');
+    if(r2id==='default'){alert('第二台車 id 不可用 default');return;}
+    const r2x=num(document.getElementById('r2x').value,3), r2y=num(document.getElementById('r2y').value,-2);
+    robots+=`    - {id: ${r2id}, x: ${r2x}, y: ${r2y}}\n`;
+    agents+=`  - type: ${document.getElementById('a2t').value}
+    kwargs:
+      robot_id: ${r2id}
+`;
+  }
+  const gx=num(document.getElementById('gx').value,6), gy=num(document.getElementById('gy').value,4), gz=num(document.getElementById('gz').value,0.31);
+  const obsLines=(document.getElementById('obs').value||'').trim().split(/\n+/).filter(Boolean);
+  let obstacles='';
+  for(const line of obsLines){
+    const p=line.trim().split(/[\s,]+/).map(parseFloat);
+    if(p.length>=2&&p.every(Number.isFinite)){
+      const z=p.length>=3?p[2]:0.5;
+      obstacles+=`    - {x: ${p[0]}, y: ${p[1]}, z: ${z}}\n`;
+    }
+  }
+  const obsSection=obstacles?`  obstacles:\n${obstacles}`:`  obstacles: []\n`;
+
+  const mapRes=num(document.getElementById('mapres').value,1);
+  const plist=[];
+  if(document.getElementById('pl_dist').checked)plist.push('physics_distance');
+  if(document.getElementById('pl_lidar').checked)plist.push('physics_lidar');
+  plist.push('goal_publisher');
+  if(document.getElementById('pl_col').checked)plist.push('collision_detector');
+  if(document.getElementById('pl_map').checked)plist.push('occupancy_map');
+  let plugins='';
+  for(const n of plist)plugins+=pluginBlock(n,mapRes);
+
+  const yaml=`# Generated by IR-AAP mission wizard — edit freely
+world:
+  backend: ${backend}
+  gui: ${gui?'true':'false'}
+  robots:
+${robots}${obsSection}
+goal:
+  x: ${gx}
+  y: ${gy}
+  z: ${gz}
+
+engine:
+  config:
+    engine:
+      enable_metrics: true
+
+plugins:
+${plugins}
+agents:
+${agents}`;
+  document.getElementById('out').value=yaml;
+}
+
+function download(){
+  const t=document.getElementById('out').value;
+  if(!t.trim()){gen();}
+  const blob=new Blob([document.getElementById('out').value],{type:'text/yaml;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='mission.yaml';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>

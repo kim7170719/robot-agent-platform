@@ -1,0 +1,66 @@
+# Default IR-AAP live stack profile (see core.live_bootstrap.load_profile / build_live_stack).
+
+world:
+  backend: pybullet
+  gui: false
+  # 可選：物理參數（見 docs/simulation_physics.md）
+  # physics:
+  #   timestep: 0.004167
+  #   gravity_z: -9.81
+  # 可選：可動測試物（有質量，受重力／碰撞）
+  # dynamics:
+  #   - {x: 1, y: 0, z: 2.0, mass: 0.3, half_extent: 0.05}
+  robots:
+    - {id: scout, x: 3, y: 0}
+    - {id: worker, x: -2, y: 3}
+  obstacles:
+    - {x: 5, y: 0, z: 0.5}
+    - {x: -3, y: -2, z: 0.5}
+    - {x: 2, y: 4, z: 0.5}
+
+# 可選：在 PyBullet 場景載入 bundled 手臂（含 prismatic gripper_slide）；mock backend 會略過
+# manipulator:
+#   enabled: true
+#   id: demo_arm
+#   x: 2.0
+#   y: -1.0
+#   z: 0.15
+#   urdf_path: null   # null = 內建 box_arm_with_gripper.urdf
+
+goal:
+  x: 8.0
+  y: 5.0
+  z: 0.31
+
+engine:
+  config:
+    engine:
+      enable_metrics: true
+
+plugins:
+  - type: physics_distance
+    kwargs:
+      noise_level: 0.1
+      seed: 42
+  - type: physics_lidar
+    kwargs:
+      num_rays: 36
+      noise_level: 0.05
+  - type: goal_publisher
+    kwargs: {}
+  - type: collision_detector
+    kwargs: {}
+  - type: occupancy_map
+    kwargs:
+      resolution: 1.0
+
+agents:
+  - type: physics_agent
+    kwargs:
+      robot_id: default
+  - type: goal_agent
+    kwargs:
+      robot_id: scout
+  - type: astar_agent
+    kwargs:
+      robot_id: worker

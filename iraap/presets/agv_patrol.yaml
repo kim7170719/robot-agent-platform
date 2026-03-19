@@ -1,0 +1,49 @@
+# =============================================================================
+# AGV 雙車巡邏 / 協作 | Two AGVs: one goal-following + one A* on map
+# 適合：兩台車、較多障礙、一台盯目標一台走路徑
+# =============================================================================
+
+world:
+  backend: pybullet
+  gui: false
+  robots:
+    - {id: agv_alpha, x: -3, y: 0}
+    - {id: agv_bravo, x: 2, y: -2}
+  obstacles:
+    - {x: 0, y: 2, z: 0.5}
+    - {x: 3, y: 1, z: 0.5}
+    - {x: 5, y: -1, z: 0.5}
+    - {x: -2, y: -3, z: 0.5}
+
+goal:
+  x: 6.0
+  y: 4.0
+  z: 0.31
+
+engine:
+  config:
+    engine:
+      enable_metrics: true
+
+plugins:
+  - type: physics_distance
+    kwargs: {noise_level: 0.1, seed: 42}
+  - type: physics_lidar
+    kwargs: {num_rays: 36, noise_level: 0.05}
+  - type: goal_publisher
+    kwargs: {}
+  - type: collision_detector
+    kwargs: {}
+  - type: occupancy_map
+    kwargs: {resolution: 0.8}
+
+agents:
+  - type: physics_agent
+    kwargs:
+      robot_id: default
+  - type: goal_agent
+    kwargs:
+      robot_id: agv_alpha
+  - type: astar_agent
+    kwargs:
+      robot_id: agv_bravo

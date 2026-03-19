@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iraap"
+version = "2.0.0"
+description = "Industrial Robot AI Agent Platform (IR-AAP)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pybullet>=3.2.7",
+    "websockets>=12.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "gymnasium>=0.29",
+    "stable-baselines3>=2.2",
+    "numpy>=1.24",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.3",
+]
+
+[project.scripts]
+iraap = "iraap.cli:main"
+
+# Third-party extensions (optional):
+# [project.entry-points."iraap.register"]
+# mypkg = "mypkg.iraap_ext:register"
+
+[tool.setuptools]
+py-modules = ["run_live"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "core*",
+    "agents*",
+    "plugins*",
+    "simulator*",
+    "actions*",
+    "rl*",
+    "planning*",
+    "api*",
+    "dashboard*",
+    "iraap*",
+]
+exclude = ["tests*", "examples*"]
+
+[tool.setuptools.package-data]
+iraap = ["presets/*.yaml", "presets/*.md"]
+dashboard = ["*.html"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["."]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402"]
+"examples/**" = ["E402"]

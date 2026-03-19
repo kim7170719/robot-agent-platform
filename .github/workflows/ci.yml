@@ -1,0 +1,80 @@
+name: IR-AAP CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install "stable-baselines3>=2.2"
+          pip install -e .
+
+      - name: CLI smoke (iraap doctor)
+        run: iraap doctor
+
+      - name: Run tests
+        env:
+          PYTHONPATH: .
+        run: pytest tests/ -v --tb=short -x
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t iraap:test .
+      - name: Smoke test container (mock API in image)
+        run: |
+          docker run --rm iraap:test python -c "
+          from fastapi.testclient import TestClient
+          from api.server import create_app
+          from core.live_bootstrap import build_live_stack
+          s = build_live_stack('config/mock_api_iraap.yaml')
+          app = create_app(
+              s.engine, s.bus, s.world, s.cfg,
+              s.goal_publisher, s.metrics, s.hrm,
+          )
+          with TestClient(app) as c:
+              r = c.get('/api/v1/health')
+              assert r.status_code == 200, r.text
+          print('docker smoke ok')
+          "

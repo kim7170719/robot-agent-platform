@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IR-AAP Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e17;color:#c8d6e5;font-family:'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}
+header{display:flex;align-items:center;gap:10px;padding:8px 16px;background:linear-gradient(90deg,#0f1923,#162032);border-bottom:1px solid #1a2744;flex-shrink:0}
+header h1{font-size:1rem;font-weight:600;letter-spacing:1px;background:linear-gradient(90deg,#00d2ff,#7a5cff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.dot{width:9px;height:9px;border-radius:50%;background:#ff4757;animation:pulse 1.5s infinite;flex-shrink:0}
+.dot.on{background:#0be881}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hdr-stats{margin-left:auto;display:flex;gap:14px;font-size:.72rem;opacity:.7}
+main{flex:1;display:grid;grid-template-columns:1fr 310px;grid-template-rows:1fr 1fr;gap:8px;padding:8px;overflow:hidden}
+.panel{background:#111827;border:1px solid #1e2d4a;border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+.ph{padding:6px 10px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:#7a8ba8;border-bottom:1px solid #1e2d4a;background:rgba(15,25,35,.6);display:flex;align-items:center;justify-content:space-between}
+.pb{flex:1;overflow-y:auto;overflow-x:hidden;padding:7px;position:relative}
+canvas{width:100%;height:100%;display:block}
+/* Event log */
+#event-log{font-family:'Cascadia Code','Fira Code',monospace;font-size:.68rem;line-height:1.4}
+.ll{padding:2px 3px;border-bottom:1px solid rgba(30,45,74,.2)}.ll .et{color:#00d2ff;font-weight:600}.ll .tm{color:#636e72;margin-right:4px}
+/* Metrics */
+.mb{display:flex;align-items:center;gap:5px;margin:2px 0}
+.mb .la{width:68px;font-size:.68rem;color:#7a8ba8}.mb .br{flex:1;height:11px;background:#1a2744;border-radius:3px;overflow:hidden}
+.mb .fl{height:100%;border-radius:3px;transition:width .3s}.fl-c{background:linear-gradient(90deg,#0be881,#00d2ff)}.fl-p{background:linear-gradient(90deg,#7a5cff,#ff6b81)}.fl-g{background:linear-gradient(90deg,#ffc312,#ff6b81)}
+.mb .vl{width:52px;text-align:right;font-size:.68rem;font-family:monospace}
+/* Controls */
+.cs{margin-bottom:8px}.cs h3{font-size:.7rem;color:#7a8ba8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid #1e2d4a}
+.br2{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px}
+.btn{padding:4px 8px;border:1px solid #1e2d4a;border-radius:5px;background:#1a2744;color:#c8d6e5;font-size:.7rem;cursor:pointer;transition:all .12s;font-family:inherit}
+.btn:hover{background:#243b5c;border-color:#00d2ff}.btn:active{transform:scale(.96)}
+.btn-p{background:linear-gradient(135deg,#0055ff,#7a5cff);border-color:#7a5cff;color:#fff}
+.btn-d{background:linear-gradient(135deg,#ff4757,#ff6b81);border-color:#ff4757;color:#fff}
+.btn-s{background:linear-gradient(135deg,#0be881,#00d2ff);border-color:#0be881;color:#0a0e17;font-weight:600}
+.btn-w{background:linear-gradient(135deg,#ffc312,#ff9f43);border-color:#ffc312;color:#0a0e17;font-weight:600}
+.ir{display:flex;gap:3px;align-items:center;margin-bottom:3px}
+.ir label{font-size:.68rem;color:#7a8ba8;width:26px}
+.ir input,.ir select{flex:1;padding:3px 5px;border:1px solid #1e2d4a;border-radius:3px;background:#0f1923;color:#c8d6e5;font-size:.7rem;font-family:monospace;outline:none}
+.ir input:focus,.ir select:focus{border-color:#00d2ff}
+.ri{display:flex;align-items:center;gap:6px;padding:3px 5px;border-radius:3px;margin:1px 0;background:#0f1923;font-size:.7rem;font-family:monospace}
+.rd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.rn{flex:1;color:#c8d6e5}.rp{color:#636e72}
+.rx{cursor:pointer;color:#ff4757;font-size:.8rem;opacity:.5}.rx:hover{opacity:1}
+.resp{font-size:.65rem;font-family:monospace;background:#0f1923;border:1px solid #1e2d4a;border-radius:3px;padding:5px;margin-top:4px;max-height:70px;overflow:auto;color:#7a8ba8;white-space:pre-wrap;word-break:break-all}
+.badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:.62rem;font-weight:600}
+.b-ok{background:#0be88133;color:#0be881}.b-er{background:#ff475733;color:#ff4757}
+.slider-row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.slider-row label{font-size:.68rem;color:#7a8ba8;width:68px}
+.slider-row input[type=range]{flex:1;accent-color:#00d2ff;height:4px}
+.slider-row .sv{width:40px;font-size:.68rem;font-family:monospace;text-align:right}
+.tab-row{display:flex;gap:0;margin-bottom:6px}
+.tab{padding:4px 10px;font-size:.68rem;cursor:pointer;border:1px solid #1e2d4a;background:#0f1923;color:#7a8ba8;border-radius:5px 5px 0 0;margin-right:-1px}
+.tab.active{background:#1a2744;color:#00d2ff;border-bottom-color:#1a2744}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.pi{display:flex;align-items:center;gap:6px;padding:3px 5px;border-radius:3px;margin:1px 0;background:#0f1923;font-size:.7rem}
+.pi .pn{flex:1;font-family:monospace}.pi .ps{font-size:.62rem;padding:1px 5px;border-radius:3px}
+.ps-on{background:#0be88133;color:#0be881}.ps-off{background:#ff475733;color:#ff4757}
+.pi .px{cursor:pointer;color:#ff4757;font-size:.8rem;opacity:.5}.px:hover{opacity:1}
+.help{font-size:.62rem;color:#636e72;line-height:1.4;margin:0 0 6px}
+.sep{height:1px;background:#1e2d4a;margin:10px 0}
+.conn-grid{display:grid;grid-template-columns:1fr;gap:4px}
+.view-host{min-height:300px;flex:1;display:flex;flex-direction:column}
+#view-3d-wrap,#view-2d-wrap{flex:1;min-height:280px;position:relative}
+#canvas-3d{display:block;width:100%;height:100%;cursor:grab}
+#canvas-3d:active{cursor:grabbing}
+.view-toggles .btn{opacity:.7}
+.view-toggles .btn.btn-p{opacity:1}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+<header>
+  <div class="dot" id="ws-dot" title="WebSocket"></div>
+  <div class="dot" id="api-dot" title="REST API"></div>
+  <h1>IR-AAP Interactive Dashboard</h1>
+  <a href="/wizard" style="font-size:.68rem;color:#00d2ff;margin-left:8px" title="表單產生任務 YAML">任務精靈</a>
+  <div class="hdr-stats">
+    <span>Events: <b id="ev-count">0</b></span>
+    <span>Robots: <b id="robot-count">0</b></span>
+    <span>Step: <b id="step-num">0</b></span>
+    <span>EPS: <b id="eps-num">0</b>/s</span>
+    <span id="pause-badge" style="display:none;color:#ffc312">PAUSED</span>
+  </div>
+</header>
+<main>
+  <!-- 3D / 2D simulation view -->
+  <div class="panel">
+    <div class="ph">
+      <span>Simulation view (PyBullet 3D)</span>
+      <span class="view-toggles br2" style="margin:0">
+        <button type="button" class="btn btn-p" id="btn-view-3d" onclick="setViewMode('3d')">3D</button>
+        <button type="button" class="btn" id="btn-view-2d" onclick="setViewMode('2d')">2D</button>
+      </span>
+    </div>
+    <div class="ph" style="border-top:none;padding-top:0">
+      <span style="font-size:.62rem;color:#636e72" id="map-info">3D: 軌道旋轉 / 滾輪縮放 / 左鍵點地面設目標 · 2D: 左鍵目標 · 右鍵平移</span>
+    </div>
+    <div class="pb view-host">
+      <div id="view-3d-wrap"><canvas id="canvas-3d"></canvas></div>
+      <div id="view-2d-wrap" style="display:none"><canvas id="map-canvas"></canvas></div>
+    </div>
+  </div>
+  <!-- Control Panel (spans both rows on right) -->
+  <div class="panel" style="grid-row:1/3">
+    <div class="ph"><span>Control Panel</span></div>
+    <div class="pb">
+      <!-- Tabs -->
+      <div class="tab-row">
+        <div class="tab active" data-tab="sim" onclick="switchTab('sim',this)">Sim</div>
+        <div class="tab" data-tab="world" onclick="switchTab('world',this)">World</div>
+        <div class="tab" data-tab="params" onclick="switchTab('params',this)">Params</div>
+        <div class="tab" data-tab="setup" onclick="switchTab('setup',this)">設定</div>
+        <div class="tab" data-tab="plugins" onclick="switchTab('plugins',this)">Plugins</div>
+        <div class="tab" data-tab="replay" onclick="switchTab('replay',this)">Replay</div>
+      </div>
+
+      <!-- Tab: Sim -->
+      <div class="tab-panel active" id="tab-sim">
+        <div class="cs"><h3>Command transport</h3>
+          <label style="font-size:.68rem;color:#7a8ba8;display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="prefer-ws" onchange="preferWsCmd=this.checked"/>
+            Prefer WebSocket for Step / Pause / Resume / Reset / Goal (requires <code style="font-size:.6rem">run_live.py</code>)
+          </label>
+        </div>
+        <div class="cs"><h3>Simulation Control</h3>
+          <div class="br2">
+            <button class="btn btn-p" onclick="apiStep(1)">+1</button>
+            <button class="btn btn-p" onclick="apiStep(5)">+5</button>
+            <button class="btn btn-p" onclick="apiStep(20)">+20</button>
+            <button class="btn btn-p" onclick="apiStep(100)">+100</button>
+            <button class="btn btn-w" onclick="apiPause()">Pause</button>
+            <button class="btn btn-s" onclick="apiResume()">Resume</button>
+            <button class="btn btn-d" onclick="apiReset()">Reset</button>
+          </div>
+        </div>
+        <div class="cs"><h3>Set Goal</h3>
+          <div class="ir"><label>X</label><input type="number" id="goal-x" value="8" step="0.5"/></div>
+          <div class="ir"><label>Y</label><input type="number" id="goal-y" value="5" step="0.5"/></div>
+          <div class="ir"><label>Z</label><input type="number" id="goal-z" value="0.31" step="0.1"/></div>
+          <div class="br2"><button class="btn btn-s" onclick="apiSetGoal()">Set Goal</button></div>
+        </div>
+        <div class="cs"><h3>Move Robot</h3>
+          <div class="ir"><label>ID</label><select id="move-rid"></select></div>
+          <div class="br2">
+            <button class="btn" onclick="apiMove('forward')">Fwd</button>
+            <button class="btn" onclick="apiMove('backward')">Back</button>
+            <button class="btn" onclick="apiMove('left')">Left</button>
+            <button class="btn" onclick="apiMove('right')">Right</button>
+            <button class="btn" onclick="apiMove('up')">Up</button>
+            <button class="btn" onclick="apiMove('down')">Down</button>
+          </div>
+        </div>
+        <div class="cs"><h3>Robots</h3><div id="robot-list"></div></div>
+        <div class="cs"><h3>Metrics</h3>
+          <div class="mb"><span class="la">Step ms</span><div class="br"><div class="fl fl-c" id="bar-step" style="width:0"></div></div><span class="vl" id="val-step">—</span></div>
+          <div class="mb"><span class="la">Events/s</span><div class="br"><div class="fl fl-p" id="bar-eps" style="width:0"></div></div><span class="vl" id="val-eps">—</span></div>
+          <div class="mb"><span class="la">Map Free</span><div class="br"><div class="fl fl-c" id="bar-free" style="width:0"></div></div><span class="vl" id="val-free">—</span></div>
+          <div class="mb"><span class="la">Map Occ</span><div class="br"><div class="fl fl-g" id="bar-occ" style="width:0"></div></div><span class="vl" id="val-occ">—</span></div>
+        </div>
+      </div>
+
+      <!-- Tab: World -->
+      <div class="tab-panel" id="tab-world">
+        <p class="help">在此直接布置場景：機器人、障礙、可掉落方塊、瞬移座標。變更後可按「同步場景」或開啟自動同步。</p>
+        <div class="cs"><h3>Add Robot</h3>
+          <div class="ir"><label>ID</label><input type="text" id="add-rid" placeholder="robot_name"/></div>
+          <div class="ir"><label>X</label><input type="number" id="add-rx" value="0" step="0.5"/></div>
+          <div class="ir"><label>Y</label><input type="number" id="add-ry" value="0" step="0.5"/></div>
+          <div class="ir"><label>Z</label><input type="number" id="add-rz" value="0.31" step="0.05"/></div>
+          <div class="br2"><button class="btn btn-s" onclick="apiAddRobot()">Add Robot</button></div>
+        </div>
+        <div class="cs"><h3>機器人瞬移（座標）</h3>
+          <p class="help">對應 REST <code>POST /robots/position</code>，立即設定球體機器人位置（需 PyBullet / mock 3D world）。</p>
+          <div class="ir"><label>ID</label><select id="tp-rid"></select></div>
+          <div class="ir"><label>X</label><input type="number" id="tp-x" value="0" step="0.5"/></div>
+          <div class="ir"><label>Y</label><input type="number" id="tp-y" value="0" step="0.5"/></div>
+          <div class="ir"><label>Z</label><input type="number" id="tp-z" value="0.31" step="0.05"/></div>
+          <div class="br2"><button class="btn btn-p" onclick="apiTeleportRobot()">套用座標</button>
+            <button class="btn" onclick="fillTeleportFromSelected()" title="從上方機器人列表帶入目前座標">帶入目前位置</button></div>
+        </div>
+        <div class="cs"><h3>Add Obstacle</h3>
+          <div class="ir"><label>X</label><input type="number" id="obs-x" value="3" step="0.5"/></div>
+          <div class="ir"><label>Y</label><input type="number" id="obs-y" value="3" step="0.5"/></div>
+          <div class="ir"><label>Z</label><input type="number" id="obs-z" value="0.5" step="0.5"/></div>
+          <div class="br2">
+            <button class="btn btn-w" onclick="apiAddObstacle()">Place Obstacle</button>
+            <button class="btn btn-d" onclick="apiClearObstacles()">Clear All</button>
+          </div>
+        </div>
+        <div class="cs"><h3>可動測試物（動力學方塊）</h3>
+          <p class="help"><code>POST /dynamics/box</code> — 有質量方塊，會受重力影響（視模擬步進而定）。</p>
+          <div class="ir"><label>X</label><input type="number" id="dyn-x" value="0" step="0.5"/></div>
+          <div class="ir"><label>Y</label><input type="number" id="dyn-y" value="0" step="0.5"/></div>
+          <div class="ir"><label>Z</label><input type="number" id="dyn-z" value="2" step="0.1"/></div>
+          <div class="ir"><label>kg</label><input type="number" id="dyn-mass" value="0.3" step="0.05"/></div>
+          <div class="ir"><label>半邊</label><input type="number" id="dyn-he" value="0.06" step="0.01"/></div>
+          <div class="br2">
+            <button class="btn btn-s" onclick="apiSpawnDynamic()">生成方塊</button>
+            <button class="btn btn-d" onclick="apiClearDynamics()">清空 dynamics</button>
+          </div>
+        </div>
+        <div class="cs"><h3>URDF 手臂 / 夾爪</h3>
+          <p class="help">需在 YAML 啟用 <code>manipulator.enabled</code> 並以 <code>run_live</code> 啟動；否則 API 回 404。</p>
+          <div class="br2">
+            <button class="btn" onclick="apiManipulatorState()">讀取狀態</button>
+          </div>
+          <div class="slider-row"><label>張開</label><input type="range" min="0" max="1" step="0.05" value="0.5" id="grip-open" oninput="document.getElementById('sv-grip').textContent=this.value"/><span class="sv" id="sv-grip">0.5</span></div>
+          <div class="br2"><button class="btn btn-p" onclick="apiGripperSet()">套用夾爪</button></div>
+          <div class="resp" id="manip-resp" style="max-height:64px;margin-top:4px">—</div>
+        </div>
+        <div class="cs"><h3>同步與查詢</h3>
+          <div class="br2">
+            <button class="btn btn-s" onclick="fetchState()">同步場景</button>
+            <button class="btn" onclick="apiGet('/state')">State (raw)</button>
+            <button class="btn" onclick="apiGet('/metrics')">Metrics</button>
+            <button class="btn" onclick="apiGet('/config')">Config</button>
+            <button class="btn" onclick="apiGet('/events?limit=10')">Events</button>
+            <button class="btn" onclick="apiGet('/plugins')">Plugins</button>
+          </div>
+          <label style="font-size:.68rem;color:#7a8ba8;display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer">
+            <input type="checkbox" id="auto-sync" onchange="toggleAutoSync(this.checked)"/>
+            每 2 秒自動同步場景（機器人 / 障礙 / dynamics）
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab: Setup (connection) -->
+      <div class="tab-panel" id="tab-setup">
+        <p class="help">瀏覽器儲存於 localStorage（鍵名 <code>iraap.api</code>、<code>iraap.api_prefix</code>、<code>iraap.ws</code>）。也可用網址參數 <code>?api=</code>、<code>api_prefix=</code>、<code>ws=</code>。</p>
+        <div class="cs"><h3>REST API</h3>
+          <div class="ir"><label>Origin</label><input type="text" id="conn-api-origin" placeholder="http://localhost:8000"/></div>
+          <div class="ir"><label>Prefix</label><input type="text" id="conn-api-prefix" placeholder="/api/v1"/></div>
+        </div>
+        <div class="cs"><h3>WebSocket</h3>
+          <div class="ir"><label>URL</label><input type="text" id="conn-ws" placeholder="ws://localhost:8765"/></div>
+        </div>
+        <div class="br2">
+          <button class="btn btn-s" onclick="applyConnectionSettings()">儲存並重新載入</button>
+          <button class="btn" onclick="fillConnFields()">還原目前設定</button>
+        </div>
+        <div class="sep"></div>
+        <p class="help">若 API 與頁面不同機，請把 CORS 開在後端（預設 <code>allow_origins *</code>）。</p>
+      </div>
+
+      <!-- Tab: Params -->
+      <div class="tab-panel" id="tab-params">
+        <div class="cs"><h3>Sensor Noise</h3>
+          <div class="slider-row"><label>Distance</label><input type="range" min="0" max="2" step="0.05" value="0.1" id="sl-dist-noise" oninput="sliderUpdate('sensor.noise_level',this.value,this)"/><span class="sv" id="sv-dist-noise">0.1</span></div>
+          <div class="slider-row"><label>Lidar</label><input type="range" min="0" max="2" step="0.05" value="0.05" id="sl-lidar-noise" oninput="sliderUpdate('lidar.noise_level',this.value,this)"/><span class="sv" id="sv-lidar-noise">0.05</span></div>
+        </div>
+        <div class="cs"><h3>Agent Params</h3>
+          <div class="slider-row"><label>Safe Dist</label><input type="range" min="0.5" max="5" step="0.1" value="1.5" id="sl-safe-dist" oninput="sliderUpdate('agent.safe_distance',this.value,this)"/><span class="sv" id="sv-safe-dist">1.5</span></div>
+          <div class="slider-row"><label>Goal Radius</label><input type="range" min="0.3" max="3" step="0.1" value="0.8" id="sl-goal-rad" oninput="sliderUpdate('agent.goal_reached_radius',this.value,this)"/><span class="sv" id="sv-goal-rad">0.8</span></div>
+        </div>
+        <div class="cs"><h3>Set Config Key</h3>
+          <div class="ir"><label>Key</label><input type="text" id="cfg-key" placeholder="section.key"/></div>
+          <div class="ir"><label>Val</label><input type="text" id="cfg-val" placeholder="value"/></div>
+          <div class="br2"><button class="btn btn-p" onclick="apiSetConfig()">Apply</button></div>
+        </div>
+        <div class="cs"><h3>Persist config</h3>
+          <div class="ir"><label>File</label><input type="text" id="save-cfg-name" value="iraap_config.yaml"/></div>
+          <div class="br2"><button class="btn btn-s" onclick="apiSaveConfig()">Save to disk</button></div>
+        </div>
+      </div>
+
+      <!-- Tab: Plugins -->
+      <div class="tab-panel" id="tab-plugins">
+        <div class="cs"><h3>Active Plugins</h3><div id="plugin-list"></div></div>
+        <div class="cs"><h3>Active Agents</h3><div id="agent-list"></div></div>
+        <div class="br2"><button class="btn" onclick="refreshPlugins()">Refresh</button></div>
+      </div>
+
+      <!-- Tab: Replay -->
+      <div class="tab-panel" id="tab-replay">
+        <div class="cs"><h3>JSONL session playback</h3>
+          <p style="font-size:.62rem;color:#636e72;margin-bottom:6px">Loads Recorder <code>.jsonl</code> from the project folder; animates the map from stored events.</p>
+          <div class="ir"><label>File</label><select id="replay-file"><option value="">— refresh list —</option></select></div>
+          <div class="br2">
+            <button class="btn" onclick="loadReplaySessions()">Refresh list</button>
+            <button class="btn btn-s" onclick="loadReplayFile()">Load events</button>
+          </div>
+          <div class="slider-row"><label>Interval</label><input type="range" id="replay-speed" min="20" max="500" step="10" value="120" oninput="document.getElementById('sv-replay-speed').textContent=this.value"/><span class="sv" id="sv-replay-speed">120</span><span style="font-size:.6rem;color:#636e72">ms</span></div>
+          <div class="br2">
+            <button class="btn btn-s" onclick="startReplayPlayback()">Play</button>
+            <button class="btn btn-w" onclick="pauseReplayPlayback()">Pause</button>
+            <button class="btn btn-d" onclick="stopReplayPlayback()">Stop &amp; live</button>
+          </div>
+          <div style="font-size:.62rem;color:#7a8ba8;margin-top:4px">Status: <span id="replay-status">idle</span></div>
+        </div>
+      </div>
+
+      <div class="cs"><h3>API Response</h3><div class="resp" id="api-resp">Ready.</div></div>
+    </div>
+  </div>
+  <!-- Event Stream -->
+  <div class="panel">
+    <div class="ph"><span>Event Stream</span>
+      <div class="br2" style="margin:0;gap:3px">
+        <button class="btn" style="padding:2px 6px;font-size:.62rem" onclick="clearLog()">Clear</button>
+        <select id="ev-filter" style="padding:2px 3px;font-size:.62rem;background:#1a2744;color:#c8d6e5;border:1px solid #1e2d4a;border-radius:3px" onchange="evFilter=this.value">
+          <option value="">All</option>
+          <option value="action.move_3d">move_3d</option>
+          <option value="sensor.distance_3d">distance</option>
+          <option value="sensor.lidar">lidar</option>
+          <option value="engine.metrics">metrics</option>
+          <option value="goal.target">goal</option>
+          <option value="goal.reached">reached</option>
+          <option value="physics.collision">collision</option>
+          <option value="map.occupancy">map</option>
+          <option value="bt.tick">bt</option>
+          <option value="system.plugin_loaded">plugin_load</option>
+          <option value="ws.command.ack">ws_ack</option>
+        </select>
+      </div>
+    </div>
+    <div class="pb" id="event-log"></div>
+  </div>
+</main>
+<script>
+const qs=new URLSearchParams(location.search);
+let API_ORIGIN=(qs.get('api')||localStorage.getItem('iraap.api')||location.origin).replace(/\/$/,'');
+let API_PREFIX=(qs.get('api_prefix')||localStorage.getItem('iraap.api_prefix')||'/api/v1').replace(/\/$/,'');
+let API_BASE=API_ORIGIN+API_PREFIX;
+function wsDefaultUrl(){
+  const full=qs.get('ws')||localStorage.getItem('iraap.ws');
+  if(full)return full;
+  const port=qs.get('ws_port')||localStorage.getItem('iraap.ws_port')||'8765';
+  const proto=location.protocol==='https:'?'wss':'ws';
+  return `${proto}://${location.hostname||'localhost'}:${port}`;
+}
+let WS_URL=wsDefaultUrl();
+let ws,robots={},evTotal=0,step=0,epsWindow=[],evFilter='';
+let dynamicsData=[],autoSyncTimer=null;
+let goalMarker=null,mapScale=25,mapOff={x:0,y:0},trails={};
+let preferWsCmd=false,liveMuted=false,replayBuffer=[],replayIdx=0,replayTimer=null,replayPlaying=false;
+const RC=['#00d2ff','#0be881','#ffc312','#ff6b81','#7a5cff','#18dcff'];
+let cm={},ci=0;
+
+function gc(id){if(!cm[id]){cm[id]=RC[ci%RC.length];ci++}return cm[id]}
+
+/* ── 3D view (Three.js) — PyBullet: x,y 水平, z 垂直；Three: Y 向上 ── */
+let scene3d,camera3d,renderer3d,controls3d,obstacleGroup,dynamicsGroup,goalMesh,robotMeshes={},trailObjs={},viewMode='3d',obstaclesData=[],raycaster,mouse3d;
+
+function physToThree(px,py,pz){
+  return new THREE.Vector3(px, pz, py);
+}
+
+function init3D(){
+  if(typeof THREE==='undefined'){console.warn('THREE.js failed to load');return;}
+  const wrap=document.getElementById('view-3d-wrap');
+  const canvas=document.getElementById('canvas-3d');
+  const w=Math.max(240,wrap.clientWidth||400),h=Math.max(240,wrap.clientHeight||320);
+  scene3d=new THREE.Scene();
+  scene3d.background=new THREE.Color(0x0a0e17);
+  scene3d.fog=new THREE.Fog(0x0a0e17,18,55);
+  camera3d=new THREE.PerspectiveCamera(52,w/h,0.1,200);
+  camera3d.position.set(9,11,14);
+  camera3d.lookAt(0,0.5,0);
+  renderer3d=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+  renderer3d.setSize(w,h);
+  renderer3d.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  scene3d.add(new THREE.AmbientLight(0x6688cc,0.38));
+  const sun=new THREE.DirectionalLight(0xffffff,0.85);
+  sun.position.set(6,14,10);
+  scene3d.add(sun);
+  scene3d.add(new THREE.GridHelper(48,48,0x2a3f66,0x162032));
+  obstacleGroup=new THREE.Group();
+  scene3d.add(obstacleGroup);
+  dynamicsGroup=new THREE.Group();
+  scene3d.add(dynamicsGroup);
+  const gg=new THREE.TorusGeometry(0.38,0.07,14,28);
+  const gm=new THREE.MeshStandardMaterial({color:0xffc312,emissive:0x443300,metalness:0.45,roughness:0.35});
+  goalMesh=new THREE.Mesh(gg,gm);
+  goalMesh.rotation.x=Math.PI/2;
+  goalMesh.visible=false;
+  scene3d.add(goalMesh);
+  if(typeof THREE.OrbitControls==='function'){
+    controls3d=new THREE.OrbitControls(camera3d,renderer3d.domElement);
+    controls3d.enableDamping=true;
+    controls3d.dampingFactor=0.06;
+    controls3d.target.set(0,0.4,0);
+  }
+  raycaster=new THREE.Raycaster();
+  mouse3d=new THREE.Vector2();
+  canvas.addEventListener('click',onCanvas3DClick);
+  (function loop(){requestAnimationFrame(loop);if(controls3d)controls3d.update();if(renderer3d&&scene3d&&camera3d)renderer3d.render(scene3d,camera3d);})();
+  window.addEventListener('resize',onResize3D);
+}
+
+function onResize3D(){
+  const wrap=document.getElementById('view-3d-wrap');
+  if(!renderer3d||!camera3d||!wrap||viewMode!=='3d')return;
+  const w=wrap.clientWidth,h=wrap.clientHeight;
+  if(w<8||h<8)return;
+  camera3d.aspect=w/h;
+  camera3d.updateProjectionMatrix();
+  renderer3d.setSize(w,h);
+}
+
+function onCanvas3DClick(ev){
+  if(viewMode!=='3d'||!raycaster||!camera3d)return;
+  const canvas=ev.target;
+  const r=canvas.getBoundingClientRect();
+  mouse3d.x=((ev.clientX-r.left)/r.width)*2-1;
+  mouse3d.y=-((ev.clientY-r.top)/r.height)*2+1;
+  raycaster.setFromCamera(mouse3d,camera3d);
+  const plane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+  const hit=new THREE.Vector3();
+  if(raycaster.ray.intersectPlane(plane,hit)){
+    const gz=parseFloat(document.getElementById('goal-z').value)||0.31;
+    const wx=hit.x, wy=hit.z, wz=gz;
+    document.getElementById('goal-x').value=wx.toFixed(2);
+    document.getElementById('goal-y').value=wy.toFixed(2);
+    goalMarker={x:wx,y:wy,z:wz};
+    sync3DScene();
+    drawMap();
+    document.getElementById('map-info').textContent=`目標 (3D 點選): (${wx.toFixed(1)}, ${wy.toFixed(1)}, ${wz.toFixed(2)})`;
+  }
+}
+
+function rebuildObstacles3D(){
+  if(!obstacleGroup||typeof THREE==='undefined')return;
+  while(obstacleGroup.children.length)obstacleGroup.remove(obstacleGroup.children[0]);
+  for(const ob of obstaclesData){
+    const p=ob.position, he=ob.half_extent!=null?ob.half_extent:0.5;
+    const g=new THREE.BoxGeometry(he*2,he*2,he*2);
+    const m=new THREE.MeshStandardMaterial({color:0xcc3344,metalness:0.15,roughness:0.75});
+    const mesh=new THREE.Mesh(g,m);
+    mesh.position.copy(physToThree(p[0],p[1],p[2]));
+    obstacleGroup.add(mesh);
+  }
+}
+
+function rebuildDynamics3D(){
+  if(!dynamicsGroup||typeof THREE==='undefined')return;
+  while(dynamicsGroup.children.length)dynamicsGroup.remove(dynamicsGroup.children[0]);
+  for(const dyn of dynamicsData){
+    const p=dyn.position||[0,0,0];
+    const he=0.08;
+    const g=new THREE.BoxGeometry(he*2,he*2,he*2);
+    const m=new THREE.MeshStandardMaterial({color:0x2ed573,metalness:0.25,roughness:0.55,emissive:0x0a3320,emissiveIntensity:0.15});
+    const mesh=new THREE.Mesh(g,m);
+    mesh.position.copy(physToThree(p[0],p[1],p[2]));
+    dynamicsGroup.add(mesh);
+  }
+}
+
+function sync3DScene(){
+  if(!scene3d||typeof THREE==='undefined')return;
+  for(const id of Object.keys(robotMeshes)){
+    if(!robots[id]){scene3d.remove(robotMeshes[id]);delete robotMeshes[id];}
+  }
+  for(const[id,p]of Object.entries(robots)){
+    if(!robotMeshes[id]){
+      const col=new THREE.Color(gc(id));
+      const geom=new THREE.SphereGeometry(0.3,28,20);
+      const mat=new THREE.MeshStandardMaterial({color:col,metalness:0.3,roughness:0.4,emissive:col,emissiveIntensity:0.12});
+      robotMeshes[id]=new THREE.Mesh(geom,mat);
+      scene3d.add(robotMeshes[id]);
+    }
+    const zz=p.z!=null?p.z:0.31;
+    robotMeshes[id].position.copy(physToThree(p.x,p.y,zz));
+  }
+  if(goalMesh){
+    if(goalMarker){
+      goalMesh.visible=true;
+      const gz=goalMarker.z!=null?goalMarker.z:(parseFloat(document.getElementById('goal-z').value)||0.31);
+      goalMesh.position.copy(physToThree(goalMarker.x,goalMarker.y,gz));
+    }else goalMesh.visible=false;
+  }
+  for(const[id,pts]of Object.entries(trails)){
+    if(pts.length<2){
+      if(trailObjs[id])trailObjs[id].visible=false;
+      continue;
+    }
+    if(!trailObjs[id]){
+      const mat=new THREE.LineBasicMaterial({color:new THREE.Color(gc(id)),transparent:true,opacity:0.5});
+      trailObjs[id]=new THREE.Line(new THREE.BufferGeometry(),mat);
+      scene3d.add(trailObjs[id]);
+    }
+    const arr=[];
+    for(const pt of pts){
+      const zz=pt.z!=null?pt.z:0.31;
+      arr.push(physToThree(pt.x,pt.y,zz));
+    }
+    if(trailObjs[id].geometry)trailObjs[id].geometry.dispose();
+    trailObjs[id].geometry=new THREE.BufferGeometry().setFromPoints(arr);
+    trailObjs[id].visible=true;
+  }
+}
+
+function setViewMode(m){
+  viewMode=m;
+  const w3=document.getElementById('view-3d-wrap'),w2=document.getElementById('view-2d-wrap');
+  w3.style.display=m==='3d'?'block':'none';
+  w2.style.display=m==='2d'?'block':'none';
+  document.getElementById('btn-view-3d').classList.toggle('btn-p',m==='3d');
+  document.getElementById('btn-view-2d').classList.toggle('btn-p',m==='2d');
+  if(m==='3d')setTimeout(onResize3D,50);
+  else drawMap();
+}
+
+/* ── WebSocket ── */
+function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
+
+function connect(){
+  if(ws&&ws.readyState===1)try{ws.close()}catch(e){}
+  ws=new WebSocket(WS_URL);
+  ws.onopen=()=>document.getElementById('ws-dot').classList.add('on');
+  ws.onclose=()=>{document.getElementById('ws-dot').classList.remove('on');setTimeout(connect,2000)};
+  ws.onerror=()=>ws.close();
+  ws.onmessage=msg=>{try{const d=JSON.parse(msg.data);if(Array.isArray(d))d.forEach(e=>handleEv(e));else handleEv(d)}catch(e){}};
+}
+function handleEv(ev, fromReplay){
+  if(!fromReplay&&liveMuted)return;
+  evTotal++;epsWindow.push(Date.now());
+  if(ev.type==='action.move_3d'){
+    const d=ev.data,id=d.robot_id||'default',np=d.new_position||[0,0,0];
+    const zz=np.length>2?np[2]:0.31;
+    robots[id]={x:np[0],y:np[1],z:zz};
+    if(!trails[id])trails[id]=[];
+    trails[id].push({x:np[0],y:np[1],z:zz});
+    if(trails[id].length>200)trails[id].shift();
+  }
+  if(ev.type==='engine.metrics'){step=ev.data.step||step;setBar('step',ev.data.elapsed_ms||0,5,(ev.data.elapsed_ms||0).toFixed(1)+'ms')}
+  if(ev.type==='map.occupancy'){const c=ev.data.cells||{};setBar('free',c.free||0,800,''+(c.free||0));setBar('occ',c.occupied||0,50,''+(c.occupied||0))}
+  if(ev.type==='ws.command.ack'){
+    const dd=ev.data||{};
+    if(dd.cmd==='pause')document.getElementById('pause-badge').style.display='inline';
+    if(dd.cmd==='resume')document.getElementById('pause-badge').style.display='none';
+  }
+  document.getElementById('ev-count').textContent=evTotal;
+  document.getElementById('step-num').textContent=step;
+  document.getElementById('robot-count').textContent=Object.keys(robots).length;
+  updateRobots();
+  if(!evFilter||ev.type===evFilter)addLog(ev);
+  drawMap();
+  sync3DScene();
+}
+function setBar(id,v,mx,t){document.getElementById('bar-'+id).style.width=Math.min(v/mx*100,100)+'%';document.getElementById('val-'+id).textContent=t}
+function addLog(ev){
+  const l=document.getElementById('event-log'),d=document.createElement('div');d.className='ll';
+  const t=new Date(ev.timestamp).toLocaleTimeString();
+  d.innerHTML=`<span class="tm">${t}</span><span class="et">${ev.type}</span> ${JSON.stringify(ev.data||{}).slice(0,90)}`;
+  l.prepend(d);while(l.children.length>300)l.lastChild.remove();
+}
+function clearLog(){document.getElementById('event-log').innerHTML=''}
+
+/* ── Robot list ── */
+function updateRobots(){
+  let h='';const sel=document.getElementById('move-rid');const tpsel=document.getElementById('tp-rid');let opts='';
+  for(const[id,p]of Object.entries(robots)){
+    const z=(p.z!=null?p.z:0).toFixed(2);
+    h+=`<div class="ri"><div class="rd" style="background:${gc(id)}"></div><span class="rn">${id}</span><span class="rp">(${p.x.toFixed(1)},${p.y.toFixed(1)},${z})</span><span class="rx" onclick="apiRemoveRobot('${id}')" title="Remove">&times;</span></div>`;
+    opts+=`<option value="${id}">${id}</option>`;
+  }
+  document.getElementById('robot-list').innerHTML=h;
+  sel.innerHTML=opts;
+  if(tpsel){tpsel.innerHTML=opts;if(!tpsel.value&&opts)tpsel.selectedIndex=0}
+}
+
+/* ── Map ── */
+function drawMap(){
+  const c=document.getElementById('map-canvas'),x=c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  const cx=c.width/2+mapOff.x,cy=c.height/2+mapOff.y,s=mapScale;
+  x.fillStyle='#0a0e17';x.fillRect(0,0,c.width,c.height);
+  x.strokeStyle='#141e2e';x.lineWidth=1;
+  for(let i=-30;i<=30;i++){const sx=cx+i*s;if(sx>0&&sx<c.width){x.beginPath();x.moveTo(sx,0);x.lineTo(sx,c.height);x.stroke()}}
+  for(let i=-30;i<=30;i++){const sy=cy+i*s;if(sy>0&&sy<c.height){x.beginPath();x.moveTo(0,sy);x.lineTo(c.width,sy);x.stroke()}}
+  x.strokeStyle='#1e2d4a';x.lineWidth=1;x.beginPath();x.moveTo(cx,0);x.lineTo(cx,c.height);x.stroke();x.beginPath();x.moveTo(0,cy);x.lineTo(c.width,cy);x.stroke();
+  // Trails
+  for(const[id,pts]of Object.entries(trails)){
+    if(pts.length<2)continue;const col=gc(id);
+    x.strokeStyle=col+'44';x.lineWidth=2;x.beginPath();x.moveTo(cx+pts[0].x*s,cy-pts[0].y*s);
+    for(let i=1;i<pts.length;i++)x.lineTo(cx+pts[i].x*s,cy-pts[i].y*s);
+    x.stroke();
+  }
+  // Goal
+  if(goalMarker){
+    const gx=cx+goalMarker.x*s,gy=cy-goalMarker.y*s;
+    x.save();x.strokeStyle='#ffc312';x.lineWidth=2;x.setLineDash([4,4]);
+    x.beginPath();x.arc(gx,gy,12,0,Math.PI*2);x.stroke();
+    x.beginPath();x.moveTo(gx-6,gy);x.lineTo(gx+6,gy);x.stroke();
+    x.beginPath();x.moveTo(gx,gy-6);x.lineTo(gx,gy+6);x.stroke();
+    x.setLineDash([]);x.font='9px monospace';x.fillStyle='#ffc312';x.fillText('GOAL',gx+14,gy+3);x.restore();
+  }
+  // Robots
+  for(const[id,p]of Object.entries(robots)){
+    const sx=cx+p.x*s,sy=cy-p.y*s,col=gc(id);
+    x.beginPath();x.arc(sx,sy,7,0,Math.PI*2);x.fillStyle=col;x.fill();
+    x.strokeStyle=col+'66';x.lineWidth=2;x.beginPath();x.arc(sx,sy,11,0,Math.PI*2);x.stroke();
+    x.font='bold 9px monospace';x.fillStyle='#c8d6e5';x.fillText(id,sx+14,sy+3);
+  }
+  for(const dyn of dynamicsData){
+    const p=dyn.position||[0,0,0];
+    const sx=cx+p[0]*s,sy=cy-p[1]*s;
+    x.beginPath();x.arc(sx,sy,5,0,Math.PI*2);x.fillStyle='#2ed57388';x.fill();
+    x.strokeStyle='#2ed573';x.lineWidth=1;x.stroke();
+  }
+  x.font='9px monospace';x.fillStyle='#636e72';x.fillText('0,0',cx+3,cy-3);
+}
+
+/* ── Map interaction ── */
+document.addEventListener('DOMContentLoaded',()=>{
+  const pw=document.getElementById('prefer-ws');
+  if(pw) preferWsCmd=pw.checked;
+  init3D();
+  setViewMode('3d');
+  rebuildObstacles3D();
+  rebuildDynamics3D();
+  fillConnFields();
+  sync3DScene();
+  const cv=document.getElementById('map-canvas');
+  cv.addEventListener('click',e=>{
+    const r=cv.getBoundingClientRect(),cx=cv.width/2+mapOff.x,cy=cv.height/2+mapOff.y;
+    const wx=(e.clientX-r.left-cx)/mapScale,wy=-(e.clientY-r.top-cy)/mapScale;
+    const gz=parseFloat(document.getElementById('goal-z').value)||0.31;
+    document.getElementById('goal-x').value=wx.toFixed(1);document.getElementById('goal-y').value=wy.toFixed(1);
+    goalMarker={x:wx,y:wy,z:gz};drawMap();sync3DScene();
+    document.getElementById('map-info').textContent=`目標 (2D): (${wx.toFixed(1)}, ${wy.toFixed(1)}, ${gz})`;
+  });
+  cv.addEventListener('wheel',e=>{e.preventDefault();mapScale=Math.max(8,Math.min(80,mapScale+(e.deltaY>0?-2:2)));drawMap();sync3DScene();},{passive:false});
+  let dr=false,ds={x:0,y:0};
+  cv.addEventListener('mousedown',e=>{if(e.button===2||e.button===1){dr=true;ds={x:e.clientX-mapOff.x,y:e.clientY-mapOff.y};e.preventDefault()}});
+  cv.addEventListener('mousemove',e=>{if(dr){mapOff.x=e.clientX-ds.x;mapOff.y=e.clientY-ds.y;drawMap();sync3DScene();}});
+  cv.addEventListener('mouseup',()=>dr=false);cv.addEventListener('mouseleave',()=>dr=false);
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+});
+
+/* ── Tabs ── */
+function switchTab(id, el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  const tab = el || document.querySelector('.tab[data-tab="'+id+'"]');
+  if(tab) tab.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+/* ── Replay ── */
+async function loadReplaySessions(){
+  try{
+    const d=await fetch(API_BASE+'/replay/sessions').then(r=>r.json());
+    const sel=document.getElementById('replay-file');
+    sel.innerHTML=(d.sessions||[]).map(f=>'<option value="'+f+'">'+f+'</option>').join('')||'<option value="">(no .jsonl)</option>';
+    document.getElementById('replay-status').textContent='list: '+(d.sessions||[]).length+' file(s)';
+  }catch(e){document.getElementById('replay-status').textContent='err: '+e.message}
+}
+async function loadReplayFile(){
+  const f=document.getElementById('replay-file').value;
+  if(!f)return;
+  try{
+    const d=await fetch(API_BASE+'/replay/events?file='+encodeURIComponent(f)+'&limit=5000').then(r=>r.json());
+    replayBuffer=d.events||[];
+    replayIdx=0;
+    document.getElementById('replay-status').textContent='loaded '+replayBuffer.length+' events';
+    document.getElementById('api-resp').textContent=JSON.stringify({file:f,count:replayBuffer.length},null,2);
+  }catch(e){document.getElementById('replay-status').textContent='load err'}
+}
+function replayTick(){
+  if(replayIdx>=replayBuffer.length){stopReplayPlayback();return;}
+  handleEv(replayBuffer[replayIdx++], true);
+  document.getElementById('replay-status').textContent='playing '+replayIdx+' / '+replayBuffer.length;
+}
+function startReplayPlayback(){
+  if(!replayBuffer.length){loadReplayFile().then(()=>{if(replayBuffer.length)_startReplayTimer()});return;}
+  _startReplayTimer();
+}
+function _startReplayTimer(){
+  if(replayTimer)clearInterval(replayTimer);
+  liveMuted=true;
+  replayPlaying=true;
+  const ms=parseInt(document.getElementById('replay-speed').value,10)||120;
+  replayTimer=setInterval(replayTick, ms);
+  document.getElementById('replay-status').textContent='playing…';
+}
+function pauseReplayPlayback(){
+  if(replayTimer){clearInterval(replayTimer);replayTimer=null}
+  replayPlaying=false;
+  document.getElementById('replay-status').textContent='paused @ '+replayIdx;
+}
+function stopReplayPlayback(){
+  if(replayTimer){clearInterval(replayTimer);replayTimer=null}
+  replayPlaying=false;
+  liveMuted=false;
+  replayIdx=0;
+  document.getElementById('replay-status').textContent='idle (live WS)';
+  fetchState();
+}
+
+/* ── API calls ── */
+async function apiCall(m,p,b){
+  const el=document.getElementById('api-resp');
+  try{
+    const o={method:m,headers:{'Content-Type':'application/json'}};
+    if(b)o.body=JSON.stringify(b);
+    const url=p.startsWith('http')?p:(API_BASE+(p.startsWith('/')?p:'/'+p));
+    const r=await fetch(url,o),d=await r.json();
+    el.innerHTML=(r.ok?'<span class="badge b-ok">'+r.status+'</span>':'<span class="badge b-er">'+r.status+'</span>')+' '+m+' '+p+'\n'+JSON.stringify(d,null,2);
+    return d;
+  }catch(e){el.innerHTML='<span class="badge b-er">ERR</span> '+e.message}
+}
+function apiStep(n){
+  if(preferWsCmd){wsSend({cmd:'step',steps:n});return;}
+  apiCall('POST','/step',{steps:n});
+}
+function apiReset(){
+  if(preferWsCmd){wsSend({cmd:'reset'});robots={};trails={};obstaclesData=[];dynamicsData=[];rebuildObstacles3D();rebuildDynamics3D();drawMap();sync3DScene();return;}
+  apiCall('POST','/reset').then(()=>{robots={};trails={};obstaclesData=[];dynamicsData=[];rebuildObstacles3D();rebuildDynamics3D();drawMap();sync3DScene();fetchState();});
+}
+function apiPause(){
+  if(preferWsCmd){wsSend({cmd:'pause'});document.getElementById('pause-badge').style.display='inline';return;}
+  apiCall('POST','/pause').then(d=>{if(d)document.getElementById('pause-badge').style.display=d.paused?'inline':'none'});
+}
+function apiResume(){
+  if(preferWsCmd){wsSend({cmd:'resume'});document.getElementById('pause-badge').style.display='none';return;}
+  apiCall('POST','/resume').then(d=>{if(d)document.getElementById('pause-badge').style.display=d.paused?'inline':'none'});
+}
+function apiSetGoal(){
+  const x=parseFloat(document.getElementById('goal-x').value)||0,y=parseFloat(document.getElementById('goal-y').value)||0,z=parseFloat(document.getElementById('goal-z').value)||0.31;
+  goalMarker={x,y,z};
+  if(preferWsCmd){wsSend({cmd:'goal',x,y,z});drawMap();sync3DScene();return;}
+  apiCall('POST','/goal',{x,y,z});drawMap();sync3DScene();
+}
+function apiSaveConfig(){
+  const el=document.getElementById('save-cfg-name');
+  const name=(el&&el.value)?el.value.trim():'iraap_config.yaml';
+  apiCall('POST','/config/save?filename='+encodeURIComponent(name));
+}
+function apiMove(dir){const id=document.getElementById('move-rid').value;apiCall('POST','/robots/move',{robot_id:id||null,direction:dir})}
+function apiAddRobot(){
+  const id=document.getElementById('add-rid').value.trim(),x=parseFloat(document.getElementById('add-rx').value)||0,y=parseFloat(document.getElementById('add-ry').value)||0;
+  const z=parseFloat(document.getElementById('add-rz').value);
+  if(!id)return;apiCall('POST','/robots/add',{robot_id:id,x,y,z:isNaN(z)?0.31:z}).then(fetchState);
+}
+function apiTeleportRobot(){
+  const ridEl=document.getElementById('tp-rid');
+  const robot_id=ridEl&&ridEl.value?ridEl.value:null;
+  const x=parseFloat(document.getElementById('tp-x').value)||0,y=parseFloat(document.getElementById('tp-y').value)||0;
+  const zraw=document.getElementById('tp-z').value;
+  const z=zraw===''||zraw==null?null:parseFloat(zraw);
+  const body={x,y,robot_id};
+  if(z!=null&&!isNaN(z))body.z=z;
+  apiCall('POST','/robots/position',body).then(d=>{if(d&&d.position)fetchState()});
+}
+function fillTeleportFromSelected(){
+  const id=document.getElementById('tp-rid')?.value||document.getElementById('move-rid')?.value;
+  if(!id||!robots[id])return;
+  const p=robots[id];
+  document.getElementById('tp-x').value=(p.x!=null?p.x:0).toFixed(2);
+  document.getElementById('tp-y').value=(p.y!=null?p.y:0).toFixed(2);
+  document.getElementById('tp-z').value=(p.z!=null?p.z:0.31).toFixed(2);
+}
+function apiSpawnDynamic(){
+  const x=parseFloat(document.getElementById('dyn-x').value)||0,y=parseFloat(document.getElementById('dyn-y').value)||0,z=parseFloat(document.getElementById('dyn-z').value)||1;
+  const mass=parseFloat(document.getElementById('dyn-mass').value)||0.1,half_extent=parseFloat(document.getElementById('dyn-he').value)||0.05;
+  apiCall('POST','/dynamics/box',{x,y,z,mass,half_extent}).then(()=>fetchState());
+}
+function apiClearDynamics(){apiCall('DELETE','/dynamics').then(()=>fetchState())}
+async function apiManipulatorState(){
+  const el=document.getElementById('manip-resp');
+  try{
+    const r=await fetch(API_BASE+'/manipulator/state');
+    const t=await r.text();
+    let j;try{j=JSON.parse(t)}catch(e){j=t}
+    el.textContent=r.ok?JSON.stringify(j,null,2):r.status+' '+t.slice(0,200);
+  }catch(e){el.textContent=String(e.message)}
+}
+async function apiGripperSet(){
+  const el=document.getElementById('manip-resp');
+  const openness=parseFloat(document.getElementById('grip-open').value)||0;
+  try{
+    const r=await fetch(API_BASE+'/manipulator/gripper',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({openness})});
+    const t=await r.text();
+    let j;try{j=JSON.parse(t)}catch(e){j=t}
+    el.textContent=r.ok?JSON.stringify(j,null,2):r.status+' '+t.slice(0,200);
+    if(r.ok)fetchState();
+  }catch(e){el.textContent=String(e.message)}
+}
+function fillConnFields(){
+  const o=document.getElementById('conn-api-origin');const p=document.getElementById('conn-api-prefix');const w=document.getElementById('conn-ws');
+  if(o)o.value=API_ORIGIN;if(p)p.value=API_PREFIX;if(w)w.value=localStorage.getItem('iraap.ws')||WS_URL;
+}
+function applyConnectionSettings(){
+  const o=document.getElementById('conn-api-origin').value.trim().replace(/\/$/,'');
+  const p=document.getElementById('conn-api-prefix').value.trim().replace(/\/$/,'');
+  const w=document.getElementById('conn-ws').value.trim();
+  if(o)localStorage.setItem('iraap.api',o);
+  if(p)localStorage.setItem('iraap.api_prefix',p);
+  if(w)localStorage.setItem('iraap.ws',w);
+  location.reload();
+}
+function toggleAutoSync(on){
+  if(autoSyncTimer){clearInterval(autoSyncTimer);autoSyncTimer=null}
+  if(on)autoSyncTimer=setInterval(()=>fetchState(),2000);
+}
+function apiRemoveRobot(id){apiCall('DELETE','/robots/'+id).then(()=>{delete robots[id];delete trails[id];updateRobots();drawMap();sync3DScene()})}
+function apiAddObstacle(){
+  const x=parseFloat(document.getElementById('obs-x').value)||0,y=parseFloat(document.getElementById('obs-y').value)||0,z=parseFloat(document.getElementById('obs-z').value)||0.5;
+  apiCall('POST','/obstacles/add',{x,y,z}).then(()=>fetchState());
+}
+function apiClearObstacles(){apiCall('DELETE','/obstacles/clear').then(()=>fetchState())}
+function apiGet(p){apiCall('GET',p)}
+function apiSetConfig(){
+  const k=document.getElementById('cfg-key').value.trim(),v=document.getElementById('cfg-val').value.trim();
+  if(!k)return;let val=v;try{val=JSON.parse(v)}catch(e){}
+  apiCall('PATCH','/config',{key:k,value:val});
+}
+function sliderUpdate(key,val,el){
+  const sv=el.parentElement.querySelector('.sv');if(sv)sv.textContent=parseFloat(val).toFixed(2);
+  apiCall('PATCH','/config',{key,value:parseFloat(val)});
+}
+
+/* ── Plugin/Agent list ── */
+async function refreshPlugins(){
+  const d=await apiCall('GET','/plugins');if(!d)return;
+  let ph='';for(const p of(d.plugins||[])){
+    ph+=`<div class="pi"><span class="pn">${p.id}</span><span class="ps ${p.active?'ps-on':'ps-off'}">${p.active?'ON':'OFF'}</span><span class="px" onclick="apiCall('DELETE','/plugins/${p.id}').then(refreshPlugins)" title="Unload">&times;</span></div>`;
+  }
+  document.getElementById('plugin-list').innerHTML=ph||'<span style="color:#636e72;font-size:.68rem">No plugins</span>';
+  let ah='';for(const a of(d.agents||[])){
+    ah+=`<div class="pi"><span class="pn">${a.id}</span><span class="px" onclick="apiCall('DELETE','/agents/${a.id}').then(refreshPlugins)" title="Unload">&times;</span></div>`;
+  }
+  document.getElementById('agent-list').innerHTML=ah||'<span style="color:#636e72;font-size:.68rem">No agents</span>';
+}
+
+/* ── Health check ── */
+async function checkAPI(){
+  try{const r=await fetch(API_BASE+'/health');const d=await r.json();
+    document.getElementById('api-dot').classList.toggle('on',r.ok);
+    document.getElementById('pause-badge').style.display=d.paused?'inline':'none';
+  }catch(e){document.getElementById('api-dot').classList.remove('on')}
+}
+
+/* ── Initial state ── */
+async function fetchState(){
+  try{const r=await fetch(API_BASE+'/state'),d=await r.json();
+    if(d.robots)for(const[id,i]of Object.entries(d.robots))robots[id]={x:i.position[0],y:i.position[1],z:i.position[2]||0};
+    obstaclesData=d.obstacles||[];
+    dynamicsData=Array.isArray(d.dynamics)?d.dynamics:[];
+    rebuildObstacles3D();
+    rebuildDynamics3D();
+    updateRobots();drawMap();sync3DScene();
+  }catch(e){}
+}
+
+setInterval(checkAPI,3000);checkAPI();
+setInterval(()=>{const now=Date.now();epsWindow=epsWindow.filter(t=>now-t<1000);const eps=epsWindow.length;document.getElementById('eps-num').textContent=eps;setBar('eps',eps,50,eps+'/s')},500);
+fetchState();refreshPlugins();connect();
+</script>
+</body>
+</html>

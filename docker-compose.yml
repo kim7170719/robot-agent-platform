@@ -1,0 +1,26 @@
+# Full IR-AAP stack: FastAPI + WebSocket + simulation in one process.
+# PyBullet is not multi-worker safe — keep a single replica per simulation.
+
+services:
+  iraap:
+    build: .
+    container_name: iraap
+    ports:
+      - "8000:8000"
+      - "8765:8765"
+    environment:
+      IRAAP_API_HOST: "0.0.0.0"
+      # IRAAP_API_PORT: "8000"
+      # IRAAP_WS_PORT: "8765"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 45s
+      retries: 3

@@ -1,0 +1,43 @@
+# =============================================================================
+# 堆高機 / 單車 minimal | Forklift-style: one main vehicle + goal navigation
+# 適合：單一載具、點對點移動、距離+雷達避障
+# =============================================================================
+
+world:
+  backend: pybullet
+  gui: false
+  robots:
+    - {id: forklift, x: 0, y: 0}
+  obstacles:
+    - {x: 4, y: 0, z: 0.5}
+    - {x: 2, y: 3, z: 0.5}
+
+goal:
+  x: 7.0
+  y: 2.0
+  z: 0.31
+
+engine:
+  config:
+    engine:
+      enable_metrics: true
+
+plugins:
+  - type: physics_distance
+    kwargs: {noise_level: 0.08, seed: 1}
+  - type: physics_lidar
+    kwargs: {num_rays: 24, noise_level: 0.04}
+  - type: goal_publisher
+    kwargs: {}
+  - type: collision_detector
+    kwargs: {}
+  - type: occupancy_map
+    kwargs: {resolution: 1.0}
+
+agents:
+  - type: physics_agent
+    kwargs:
+      robot_id: default
+  - type: goal_agent
+    kwargs:
+      robot_id: forklift

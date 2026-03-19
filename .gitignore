@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# Packaging / install artifacts
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Tests & linters
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Secrets & local env
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime / generated (optional local data)
+recording.jsonl
+*_results.png
+full_demo_results.png
+fullstack_results.png
+physics_results.png
+
+# PyBullet URDF cache (regenerated from bundled XML on first load)
+simulator/_urdf_cache/*.urdf

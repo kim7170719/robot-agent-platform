@@ -1,0 +1,54 @@
+# =============================================================================
+# IR-AAP 簡易任務範本 | Simple mission template (simulation)
+# 多數情況只需改：world / goal / agents 幾行即可跑模擬。
+# Most edits: initial robots & obstacles, goal pose, which agent drives which robot.
+# =============================================================================
+
+world:
+  # backend: pybullet = 3D 物理模擬 | mock = 無 PyBullet（僅測流程）
+  backend: pybullet
+  gui: false
+  robots:
+    # 機器人 id 與出生點（可增刪）
+    - {id: my_robot, x: 0, y: 0}
+  obstacles:
+    # 障礙方塊中心 (x,y,z)
+    - {x: 4, y: 1, z: 0.5}
+
+goal:
+  # 導航目標（與 goal_publisher 插件對應）
+  x: 6.0
+  y: 3.0
+  z: 0.31
+
+engine:
+  config:
+    engine:
+      enable_metrics: true
+
+# 感知與環境模組（像「安裝感測器」— 不需寫程式即可開關）
+plugins:
+  - type: physics_distance
+    kwargs:
+      noise_level: 0.1
+      seed: 42
+  - type: physics_lidar
+    kwargs:
+      num_rays: 36
+      noise_level: 0.05
+  - type: goal_publisher
+    kwargs: {}
+  - type: collision_detector
+    kwargs: {}
+  - type: occupancy_map
+    kwargs:
+      resolution: 1.0
+
+# 決策模組：robot_id 必須對應 world.robots 的 id
+agents:
+  - type: physics_agent
+    kwargs:
+      robot_id: default
+  - type: goal_agent
+    kwargs:
+      robot_id: my_robot
