@@ -29,8 +29,17 @@ With the stack running, **`/wizard`** serves a browser form to generate a missio
 - World / PyBullet mutations should go through paths that respect `Engine.step_lock` (REST handlers and WS commands are serialized with the sim loop).
 - Add tests under `tests/` for new behavior; keep `examples/` for demos.
 
+## Release smoke（發版前手動煙霧）
+
+1. `ruff check .` 與 `pytest tests/ -q` 通過。  
+2. `python run_live.py`（或 `iraap serve`）啟動後：  
+   - `GET /api/v1/health` 回 `ok`，且 `world_backend` / `scenarios` 合理。  
+   - 瀏覽器開 `/dashboard`：API 綠燈、標題列顯示後端類型；試 **場景預設** 與 **同步場景**。  
+   - （可選）WebSocket 綠燈、`Sim` 步進或事件流有資料。  
+
 ## Docs
 
+- **Gaps & risks (priority-ordered):** [docs/priority_risks.md](docs/priority_risks.md)
 - Event type reference: [docs/events.md](docs/events.md)
 - Simulation layout & physics (obstacles, dynamic props, gravity): [docs/simulation_physics.md](docs/simulation_physics.md)
 
